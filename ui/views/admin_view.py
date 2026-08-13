@@ -148,7 +148,7 @@ class AdminView(ctk.CTkFrame):
 
     btn_reimprimir = ctk.CTkButton(
         self.top_panel,
-        text="🖨️ REIMPRIMIR RECIBO",
+        text="REIMPRIMIR RECIBO",
         font=("Arial", 12, "bold"),
         fg_color="#0284C7",
         hover_color="#0369A1",
@@ -223,6 +223,22 @@ class AdminView(ctk.CTkFrame):
     )
     lbl_title_m.pack(fill="x", side="top")
 
+    # cols_m = (
+    #     "ticket",
+    #     "lote",
+    #     "socio",
+    #     "parcela",
+    #     "sacos",
+    #     "m_real",
+    #     "m_cont",
+    #     "fl_real",
+    #     "fl_cont",
+    #     "fp_real",
+    #     "fp_cont",
+    #     "total",
+    #     "total_cont",
+    #     "estado",
+    # )
     cols_m = (
         "ticket",
         "lote",
@@ -230,13 +246,9 @@ class AdminView(ctk.CTkFrame):
         "parcela",
         "sacos",
         "m_real",
-        "m_cont",
         "fl_real",
-        "fl_cont",
         "fp_real",
-        "fp_cont",
         "total",
-        "total_cont",
         "estado",
     )
     self.tree_master = ttk.Treeview(
@@ -254,13 +266,13 @@ class AdminView(ctk.CTkFrame):
     self.tree_master.heading("parcela", text="Parc.")
     self.tree_master.heading("sacos", text="Sacos")
     self.tree_master.heading("m_real", text="Merc. Real")
-    self.tree_master.heading("m_cont", text="Merc. Cont")
+    #self.tree_master.heading("m_cont", text="Merc. Cont")
     self.tree_master.heading("fl_real", text="Fab.Loc Real")
-    self.tree_master.heading("fl_cont", text="Fab.Loc Cont")
+    #self.tree_master.heading("fl_cont", text="Fab.Loc Cont")
     self.tree_master.heading("fp_real", text="Fab.Pta Real")
-    self.tree_master.heading("fp_cont", text="Fab.Pta Cont")
+    #self.tree_master.heading("fp_cont", text="Fab.Pta Cont")
     self.tree_master.heading("total", text="Total")
-    self.tree_master.heading("total_cont", text="Total Cont")
+    #self.tree_master.heading("total_cont", text="Total Cont")
     self.tree_master.heading("estado", text="Estado")
 
     # Anchos de columnas
@@ -270,13 +282,13 @@ class AdminView(ctk.CTkFrame):
     self.tree_master.column("parcela", width=45, anchor="center")
     self.tree_master.column("sacos", width=45, anchor="center")
     self.tree_master.column("m_real", width=75, anchor="e")
-    self.tree_master.column("m_cont", width=70, anchor="e")
+    #self.tree_master.column("m_cont", width=70, anchor="e")
     self.tree_master.column("fl_real", width=75, anchor="e")
-    self.tree_master.column("fl_cont", width=70, anchor="e")
+    #self.tree_master.column("fl_cont", width=70, anchor="e")
     self.tree_master.column("fp_real", width=75, anchor="e")
-    self.tree_master.column("fp_cont", width=70, anchor="e")
+    #self.tree_master.column("fp_cont", width=70, anchor="e")
     self.tree_master.column("total", width=85, anchor="e")
-    self.tree_master.column("total_cont", width=80, anchor="e")
+    #self.tree_master.column("total_cont", width=80, anchor="e")
     self.tree_master.column("estado", width=60, anchor="center")
 
     # Configurar estilo visual para la fila de totales al inicio
@@ -444,13 +456,13 @@ class AdminView(ctk.CTkFrame):
           item.get("codigo_parcela", "-"),
           sacos_recibo,
           f"{m_real:.2f}",
-          f"{round(m_cont)}",
+          #f"{round(m_cont)}",
           f"{fl_real:.2f}",
-          f"{round(fl_cont)}",
+          #f"{round(fl_cont)}",
           f"{fp_real:.2f}",
-          f"{round(fp_cont)}",
+          #f"{round(fp_cont)}",
           f"{total_recibo_real:.2f}",
-          f"{round(total_recibo_cont)}",
+          #f"{round(total_recibo_cont)}",
           estado_txt,
       )
       filas_a_insertar.append((valores_fila, item))
@@ -464,13 +476,13 @@ class AdminView(ctk.CTkFrame):
           "-",
           tot_sacos_gen,
           f"{tot_m_real_gen:.2f}",
-          f"{round(tot_m_cont_gen):,}",
+          #f"{round(tot_m_cont_gen):,}",
           f"{tot_fl_real_gen:.2f}",
-          f"{round(tot_fl_cont_gen):,}",
+          #f"{round(tot_fl_cont_gen):,}",
           f"{tot_fp_real_gen:.2f}",
-          f"{round(tot_fp_cont_gen):,}",
+          #f"{round(tot_fp_cont_gen):,}",
           f"{tot_general_real:.2f}",
-          f"{round(tot_general_cont):,}",
+          #f"{round(tot_general_cont):,}",
           "-",
       )
       self.tree_master.insert(
