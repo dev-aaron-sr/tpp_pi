@@ -549,69 +549,70 @@ class AdminView(ctk.CTkFrame):
   # REIMPRESIÓN DE RECIBO SELECCIONADO
   # ----------------------------------------------------------------------
   def _reimprimir_recibo_seleccionado(self):
-    """Obtiene los datos del recibo seleccionado en la tabla y los envía a la Epson LX-350."""
-    if not self.recibo_seleccionado_uuid:
-      messagebox.showwarning(
-          "Atención", "Seleccione un recibo de la tabla para reimprimir."
+      """Obtiene los datos del recibo seleccionado en la tabla y los envía a la Epson LX-350."""
+      if not self.recibo_seleccionado_uuid:
+        messagebox.showwarning(
+            "Atención", "Seleccione un recibo de la tabla para reimprimir."
+        )
+        return
+
+      if not hasattr(self, "print_service") or not self.print_service:
+        messagebox.showerror("Error", "Servicio de impresión no disponible.")
+        return
+
+      recibo_data = self.mapa_recibos.get(self.recibo_seleccionado_uuid)
+      if not recibo_data:
+        return
+
+      detalles = self.recepcion_dao.obtener_detalles_por_recepcion_uuid(
+          self.recibo_seleccionado_uuid
       )
-      return
 
-    if not hasattr(self, "print_service") or not self.print_service:
-      messagebox.showerror("Error", "Servicio de impresión no disponible.")
-      return
+      todas_bajadas = []
+      for d in detalles:
+        todas_bajadas.append({
+            "destino": d.get("destino", "MERCADO"),
+            "sacos": d.get("numero_sacos", 1),
+            "peso": float(d.get("peso_bruto", 0.0)),
+        })
 
-    recibo_data = self.mapa_recibos.get(self.recibo_seleccionado_uuid)
-    if not recibo_data:
-      return
+      recibo_payload = {
+          "codigo_ticket": recibo_data.get("codigo_ticket", "S/N"),
+          "codigo_padron": recibo_data.get("codigo_padron", "-"),
+          "socio_nombre": recibo_data.get("socio_nombre", "-"),
+          "documento": (
+              recibo_data.get("numero_documento")
+              or recibo_data.get("documento")
+              or "-"
+          ),
+          "codigo_parcela": recibo_data.get("codigo_parcela", "-"),
+          "sector": recibo_data.get("sector", "-"),
+          "fecha_pesaje": (
+              recibo_data.get("fecha_pesaje")
+              or recibo_data.get("created_at", "-")
+          ),
+          "total_sacos": recibo_data.get(
+              "total_sacos", sum(b["sacos"] for b in todas_bajadas)
+          ),
+          "peso_total": sum(b["peso"] for b in todas_bajadas),
+          "bajadas": todas_bajadas,
+      }
 
-    detalles = self.recepcion_dao.obtener_detalles_por_recepcion_uuid(
-        self.recibo_seleccionado_uuid
-    )
-
-    todas_bajadas = []
-    for d in detalles:
-      todas_bajadas.append({
-          "destino": d.get("destino", "MERCADO"),
-          "sacos": d.get("numero_sacos", 1),
-          "peso": float(d.get("peso_bruto", 0.0)),
-      })
-
-    recibo_payload = {
-        "codigo_ticket": recibo_data.get("codigo_ticket", "S/N"),
-        "codigo_padron": recibo_data.get("codigo_padron", "-"),
-        "socio_nombre": recibo_data.get("socio_nombre", "-"),
-        "documento": (
-            recibo_data.get("numero_documento")
-            or recibo_data.get("documento", "-")
-        ),
-        "codigo_parcela": recibo_data.get("codigo_parcela", "-"),
-        "sector": recibo_data.get("sector", "-"),
-        "fecha_pesaje": (
-            recibo_data.get("fecha_pesaje")
-            or recibo_data.get("created_at", "-")
-        ),
-        "total_sacos": recibo_data.get(
-            "total_sacos", sum(b["sacos"] for b in todas_bajadas)
-        ),
-        "peso_total": sum(b["peso"] for b in todas_bajadas),
-        "bajadas": todas_bajadas,
-    }
-
-    try:
-      exito = self.print_service.imprimir_recibo_dec(recibo_payload)
-      if exito:
-        messagebox.showinfo(
-            "Éxito",
-            f"Recibo {recibo_data.get('codigo_ticket')} enviado a reimpresión.",
-        )
-      else:
-        messagebox.showerror(
-            "Error",
-            "No se pudo enviar la orden de impresión a la Epson LX-350.",
-        )
-    except Exception as e:
-      messagebox.showerror("Error", f"Fallo al reimprimir: {e}")
-
+      try:
+        exito = self.print_service.imprimir_recibo_dec(recibo_payload)
+        if exito:
+          messagebox.showinfo(
+              "Éxito",
+              f"Recibo {recibo_data.get('codigo_ticket')} enviado a"
+              " reimpresión.",
+          )
+        else:
+          messagebox.showerror(
+              "Error",
+              "No se pudo enviar la orden de impresión a la Epson LX-350.",
+          )
+      except Exception as e:
+        messagebox.showerror("Error", f"Fallo al reimprimir: {e}")
   # ----------------------------------------------------------------------
   # SINCRONIZACIÓN ASÍNCRONA
   # ----------------------------------------------------------------------

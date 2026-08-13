@@ -32,11 +32,13 @@ class PrintService:
         print("⚠ No hay impresora configurada.")
         return False
 
+      nombre_limpio = nombre_impresora.strip()
+
       if IF_WINDOWS:
         try:
           import win32print
 
-          h_printer = win32print.OpenPrinter(nombre_impresora)
+          h_printer = win32print.OpenPrinter(nombre_limpio)
           try:
             h_job = win32print.StartDocPrinter(
                 h_printer, 1, ("Impresion_RAW", None, "RAW")
@@ -52,27 +54,24 @@ class PrintService:
           print(f"Error imprimiendo en Windows: {e}")
           return False
       else:
-        # =========================================================================
-        # SOLUCIÓN PARA RASPBERRY PI / LINUX (CUPS RAW DIRIGIDO POR NOMBRE DE COLA)
-        # =========================================================================
+        # ENVÍO DIRECTO RAW EN LINUX / RASPBERRY PI
         try:
-          # Se envía directamente al nombre de la impresora configurada en CUPS
-          process = subprocess.Popen(
-              ["lpr", "-P", nombre_impresora, "-o", "raw"],
+          p = subprocess.Popen(
+              ["lpr", "-P", nombre_limpio, "-o", "raw"],
               stdin=subprocess.PIPE,
               stdout=subprocess.PIPE,
               stderr=subprocess.PIPE,
           )
-          stdout, stderr = process.communicate(input=buffer_bytes)
+          stdout, stderr = p.communicate(input=buffer_bytes)
 
-          if process.returncode == 0:
+          if p.returncode == 0:
             return True
-          else:
-            err_msg = stderr.decode("utf-8", errors="ignore")
-            print(f"⚠ Error enviando a {nombre_impresora} vía lpr: {err_msg}")
-            return False
+
+          err = stderr.decode("utf-8", errors="ignore")
+          print(f"⚠ Error enviando a {nombre_limpio} vía lpr: {err}")
+          return False
         except Exception as e:
-          print(f"⚠ Error imprimiendo en Linux: {e}")
+          print(f"⚠ Error de ejecución en Linux: {e}")
           return False
 
     # =========================================================================
