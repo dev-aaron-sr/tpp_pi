@@ -92,5 +92,10 @@ class DatabaseSchema:
             cursor.execute("ALTER TABLE agricultores ADD COLUMN dni TEXT;")
         except Exception:
             pass  # Ignorar si la columna ya existe
+
+        try:
+            cursor.execute("ALTER TABLE parcelas ADD COLUMN margen TEXT;")
+        except Exception:
+            pass
         conn.commit()
         conn.close()

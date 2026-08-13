@@ -193,7 +193,8 @@ class RecepcionPesajeDao:
             SELECT r.*, 
                    a.dni,
                    a.nombres || ' ' || COALESCE(a.apellidos, '') AS socio_nombre,
-                   p.sector AS sector
+                   p.sector AS sector,
+                   p.margen
             FROM recepciones_pesaje r
             LEFT JOIN agricultores a ON a.codigo_padron = r.codigo_padron
             LEFT JOIN parcelas p ON a.id = p.agricultor_id AND r.codigo_parcela = p.codigo_parcela

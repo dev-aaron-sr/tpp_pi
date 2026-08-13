@@ -75,18 +75,20 @@ class AgricultorDao:
 
             for parc in ag.get('parcelas', []):
                 cursor.execute("""
-                    INSERT INTO parcelas (agricultor_id, codigo_interno, codigo_parcela, nombre_parcela, sector)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO parcelas (agricultor_id, codigo_interno, codigo_parcela, nombre_parcela, sector, margen)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     ON CONFLICT(agricultor_id, codigo_interno) DO UPDATE SET
                         codigo_parcela = excluded.codigo_parcela,
                         nombre_parcela = excluded.nombre_parcela,
-                        sector = excluded.sector
+                        sector = excluded.sector,
+                        margen = excluded.margen
                 """, (
                     ag_id, 
                     parc['codigo_interno'], 
                     parc.get('codigo_parcela'), 
                     parc['nombre_parcela'], 
-                    parc.get('sector')
+                    parc.get('sector'),
+                    parc.get('margen')
                 ))
 
         conn.commit()

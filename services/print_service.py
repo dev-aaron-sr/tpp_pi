@@ -137,7 +137,7 @@ class PrintService:
         )
         txt_body.append(
             f"PRODUCTOR        : {recibo_data.get('socio_nombre', '-'):<20} MARGEN"
-            "     : -"
+            f"     : {recibo_data.get('margen', '-')}"
         )
         txt_body.append(
             "COD SOCIO (PADRON):"

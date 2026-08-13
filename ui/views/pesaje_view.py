@@ -887,6 +887,7 @@ class PesajeView(ctk.CTkFrame):
                   or parcela_obj.get("codigo_parcela", "-")
               ),
               "sector": parcela_obj.get("sector", "-"),
+              "margen": parcela_obj.get("margen", "-"),
               "fecha_pesaje": fecha_cierre,
               "total_sacos": sum(b["sacos"] for b in todas_bajadas),
               "peso_total": sum(b["peso"] for b in todas_bajadas),

@@ -591,6 +591,7 @@ class AdminView(ctk.CTkFrame):
             "documento": recibo_data.get("dni") or "-",  # <--- Lee el DNI traído por el LEFT JOIN
             "codigo_parcela": recibo_data.get("codigo_parcela", "-"),
             "sector": recibo_data.get("sector", "-"),
+            "margen": recibo_data.get("margen", "-"),
             "fecha_pesaje": (
                 recibo_data.get("fecha_pesaje")
                 or recibo_data.get("created_at", "-")
