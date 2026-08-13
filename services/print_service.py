@@ -28,71 +28,52 @@ class PrintService:
     def _enviar_raw_a_impresora(
         self, nombre_impresora: str, buffer_bytes: bytes
     ) -> bool:
-        if not nombre_impresora or nombre_impresora.startswith("SIN"):
-            print("⚠ No hay impresora configurada.")
+      if not nombre_impresora or nombre_impresora.startswith("SIN"):
+        print("⚠ No hay impresora configurada.")
+        return False
+
+      if IF_WINDOWS:
+        try:
+          import win32print
+
+          h_printer = win32print.OpenPrinter(nombre_impresora)
+          try:
+            h_job = win32print.StartDocPrinter(
+                h_printer, 1, ("Impresion_RAW", None, "RAW")
+            )
+            win32print.StartPagePrinter(h_printer)
+            win32print.WritePrinter(h_printer, buffer_bytes)
+            win32print.EndPagePrinter(h_printer)
+            win32print.EndDocPrinter(h_printer)
+            return True
+          finally:
+            win32print.ClosePrinter(h_printer)
+        except Exception as e:
+          print(f"Error imprimiendo en Windows: {e}")
+          return False
+      else:
+        # =========================================================================
+        # SOLUCIÓN PARA RASPBERRY PI / LINUX (CUPS RAW DIRIGIDO POR NOMBRE DE COLA)
+        # =========================================================================
+        try:
+          # Se envía directamente al nombre de la impresora configurada en CUPS
+          process = subprocess.Popen(
+              ["lpr", "-P", nombre_impresora, "-o", "raw"],
+              stdin=subprocess.PIPE,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE,
+          )
+          stdout, stderr = process.communicate(input=buffer_bytes)
+
+          if process.returncode == 0:
+            return True
+          else:
+            err_msg = stderr.decode("utf-8", errors="ignore")
+            print(f"⚠ Error enviando a {nombre_impresora} vía lpr: {err_msg}")
             return False
-
-        if IF_WINDOWS:
-            try:
-                import win32print
-
-                h_printer = win32print.OpenPrinter(nombre_impresora)
-                try:
-                    h_job = win32print.StartDocPrinter(
-                        h_printer, 1, ("Impresion_RAW", None, "RAW")
-                    )
-                    win32print.StartPagePrinter(h_printer)
-                    win32print.WritePrinter(h_printer, buffer_bytes)
-                    win32print.EndPagePrinter(h_printer)
-                    win32print.EndDocPrinter(h_printer)
-                    return True
-                finally:
-                    win32print.ClosePrinter(h_printer)
-            except Exception as e:
-                print(f"Error imprimiendo en Windows: {e}")
-                return False
-        else:
-            # =========================================================================
-            # SOLUCIÓN PARA ARM64 / LINUX (RASPBERRY PI 5)
-            # =========================================================================
-            
-            # 1. Intento de escritura directa al puerto USB de caracteres del Kernel
-            # Esto se salta drivers, filtros y arquitecturas x86 de CUPS por completo.
-            puertos_usb = ["/dev/usb/lp0", "/dev/usb/lp1", "/dev/usb/lp2"]
-            puerto_encontrado = None
-
-            for dev in puertos_usb:
-                if os.path.exists(dev):
-                    puerto_encontrado = dev
-                    break
-
-            if puerto_encontrado:
-                try:
-                    with open(puerto_encontrado, "wb") as lp:
-                        lp.write(buffer_bytes)
-                        lp.flush()
-                    return True
-                except Exception as e:
-                    print(f"⚠ No se pudo escribir directo en {puerto_encontrado}: {e}")
-                    print("Reintentando envío mediante cola RAW de lpr...")
-
-            # 2. Respaldo mediante CUPS usando la opción -o raw
-            try:
-                process = subprocess.Popen(
-                    ["lpr", "-P", nombre_impresora, "-o", "raw"],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                stdout, stderr = process.communicate(input=buffer_bytes)
-                if process.returncode == 0:
-                    return True
-                else:
-                    print(f"Error en lpr Linux: {stderr.decode('utf-8', errors='ignore')}")
-                    return False
-            except Exception as e:
-                print(f"Error imprimiendo en Linux: {e}")
-                return False
+        except Exception as e:
+          print(f"⚠ Error imprimiendo en Linux: {e}")
+          return False
 
     # =========================================================================
     # 1. MÓDULO DE IMPRESIÓN DE RECIBOS (EPSON LX-350 / ESC/P) - SIN CAMBIOS
