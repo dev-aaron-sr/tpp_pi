@@ -1,6 +1,14 @@
+<<<<<<< HEAD
 {
     "balanza_port": "COM4",
     "balanza_baudrate": 9600,
     "impresora_recibo": "EPSON LX-350",
     "impresora_etiqueta": "TSC TE200"
+=======
+{
+    "balanza_port": "COM1",
+    "balanza_baudrate": 9600,
+    "impresora_recibo": "EPSON LX-350",
+    "impresora_etiqueta": "TSC TE200"
+>>>>>>> deef26505c66c5fdb626a9eacff35747b9e769f8
 }
