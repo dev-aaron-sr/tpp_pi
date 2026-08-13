@@ -19,6 +19,7 @@ class SyncService:
     def __init__(self, api_url: str, token: str, agricultor_dao: AgricultorDao, recepcion_dao: RecepcionPesajeDao):
         self.api_url = api_url.rstrip('/')
         self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json"

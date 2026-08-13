@@ -1,0 +1,6 @@
+{
+    "balanza_port": "COM4",
+    "balanza_baudrate": 9600,
+    "impresora_recibo": "EPSON LX-350",
+    "impresora_etiqueta": "TSC TE200"
+}

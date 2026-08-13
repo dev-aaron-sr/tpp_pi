@@ -15,17 +15,22 @@ class SesionDao:
         conn.close()
         return dict(row) if row else None
 
-    def abrir_nueva_sesion(self) -> Dict:
-        """Crea una nueva sesión de pesaje correlativa por fecha (ej: SES-20260731-01)."""
+    def abrir_nueva_sesion(self, codigo_acopio: str = "A1") -> Dict:
+        """Crea una nueva sesión de pesaje correlativa por fecha (ej: A126080401)."""
         conn = self.db_conn.get_connection()
         cursor = conn.cursor()
 
-        fecha_str = datetime.now().strftime("%Y%m%d")
+        # Formato YYMMDD (Ej: 260804)
+        fecha_yymmdd = datetime.now().strftime("%y%m%d")
         fecha_full = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        cursor.execute("SELECT COUNT(*) FROM sesiones_pesaje WHERE codigo_sesion LIKE ?", (f"SES-{fecha_str}-%",))
+        # Conteo de jornadas del día para el centro de acopio
+        patron_busqueda = f"{codigo_acopio}{fecha_yymmdd}%"
+        cursor.execute("SELECT COUNT(*) FROM sesiones_pesaje WHERE codigo_sesion LIKE ?", (patron_busqueda,))
         count = cursor.fetchone()[0] + 1
-        codigo_sesion = f"SES-{fecha_str}-{count:02d}"
+
+        # Estructura final: [ACOPIO][YYMMDD][JORNADA] -> A1 + 260804 + 01 = A126080401
+        codigo_sesion = f"{codigo_acopio}{fecha_yymmdd}{count:02d}"
 
         cursor.execute("""
             INSERT INTO sesiones_pesaje (codigo_sesion, fecha_apertura, estado)

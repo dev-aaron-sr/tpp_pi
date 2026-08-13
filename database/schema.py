@@ -1,4 +1,3 @@
-from database import connection
 from database.connection import DatabaseConnection
 
 class DatabaseSchema:
@@ -11,7 +10,7 @@ class DatabaseSchema:
         conn = self.db_conn.get_connection()
         cursor = conn.cursor()
 
-        # Tabla Maestros (Sincronizada desde Laravel para bajar los agricultores y sus detalles)
+        # Tabla Agricultores
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS agricultores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,21 +21,21 @@ class DatabaseSchema:
             );
         """)
 
-        # 1. Tabla parcelas (se agrega codigo_interno)
+        # Tabla Parcelas (codigo_interno Obligatorio | codigo_parcela Opcional)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS parcelas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 agricultor_id INTEGER NOT NULL,
-                codigo_interno TEXT,               -- P01, P02...
-                codigo_parcela TEXT UNIQUE NOT NULL,
+                codigo_interno TEXT NOT NULL,
+                codigo_parcela TEXT,
                 nombre_parcela TEXT NOT NULL,
                 sector TEXT,
-                FOREIGN KEY (agricultor_id) REFERENCES agricultores(id)
+                FOREIGN KEY (agricultor_id) REFERENCES agricultores(id),
+                UNIQUE(agricultor_id, codigo_interno)
             );
         """)
 
-
-        # Tabla de Sesiones de Pesaje (Jornadas)
+        # Tabla Sesiones
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sesiones_pesaje (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +46,7 @@ class DatabaseSchema:
             );
         """)
 
-        # Cabecera de Recibo
+        # Cabecera de Recibo (Sin columna 'destino')
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS recepciones_pesaje (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,7 +57,6 @@ class DatabaseSchema:
                 codigo_padron TEXT NOT NULL,
                 codigo_parcela TEXT NOT NULL,
                 producto TEXT DEFAULT 'MARACUYA',
-                destino TEXT NOT NULL,
                 total_sacos INTEGER NOT NULL,
                 peso_bruto_total REAL NOT NULL,
                 tara_total REAL NOT NULL,
@@ -66,25 +64,24 @@ class DatabaseSchema:
                 fecha_pesaje TEXT NOT NULL,
                 observaciones TEXT,
                 sincronizado INTEGER DEFAULT 0,
-                sincronizado_at TEXT
+                sincronizado_at TEXT,
+                estado TEXT DEFAULT 'EN_PROCESO'  -- 'EN_PROCESO' o 'COMPLETADO'
             );
         """)
 
-        # Detalles de Bajadas (Ahora incluye columna destino individual)
-        
-        # 2. Tabla pesaje_detalles (se agregan campos de trazabilidad y peso contable)
+        # Detalles de Bajadas (peso_bruto = Real | peso_contable = Redondeado)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS pesaje_detalles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 uuid TEXT UNIQUE NOT NULL,
                 recepcion_pesaje_uuid TEXT NOT NULL,
-                codigo_trazabilidad TEXT NOT NULL,  -- A1260803-01-M-1-P01-1
+                codigo_trazabilidad TEXT NOT NULL,  -- A1260803-01-M-042-P01-1
                 destino TEXT NOT NULL,              -- MERCADO / FABRICA
                 numero_sacos INTEGER NOT NULL,
-                peso_bruto_real REAL NOT NULL,      -- Ej: 108.76
-                peso_contable REAL NOT NULL,        -- Ej: 108.00 (o 109.00 si >= 0.90)
+                peso_bruto REAL NOT NULL,           -- Peso Real de Balanza
+                peso_contable REAL NOT NULL,        -- Peso Redondeado (Regla >= 0.90)
                 tara REAL DEFAULT 0.0,
-                peso_neto REAL NOT NULL,
+                peso_neto REAL NOT NULL,            -- Peso Neto Contable
                 orden INTEGER NOT NULL,
                 FOREIGN KEY (recepcion_pesaje_uuid) REFERENCES recepciones_pesaje(uuid)
             );

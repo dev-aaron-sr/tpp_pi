@@ -1,0 +1,325 @@
+import threading
+from datetime import datetime
+import tkinter as tk
+from tkinter import ttk
+import customtkinter as ctk
+
+class AdminView(ctk.CTkFrame):
+    def __init__(self, parent, recepcion_dao, sync_service):
+        super().__init__(parent, fg_color="#F1F5F9")
+        self.recepcion_dao = recepcion_dao
+        self.sync_service = sync_service
+
+        self.recibo_seleccionado_uuid = None
+        self.mapa_recibos = {}  # {item_id_treeview: dict_data_recibo}
+
+        self._configurar_estilos_tabla()
+        self._build_ui()
+        self.cargar_datos_locales()
+
+    def _configurar_estilos_tabla(self):
+        """Configura un estilo de tabla industrial de alto contraste sin decoraciones."""
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        # Configuración de Filas y Fuente (13pt negrita para lectura industrial)
+        style.configure(
+            "Industrial.Treeview",
+            background="#FFFFFF",
+            foreground="#000000",
+            fieldbackground="#FFFFFF",
+            rowheight=38,
+            font=("Arial", 13, "bold"),
+            borderwidth=1,
+            relief="solid"
+        )
+
+        # Configuración de Encabezados (Oscuro con texto blanco grande)
+        style.configure(
+            "Industrial.Treeview.Heading",
+            background="#0F172A",
+            foreground="#FFFFFF",
+            font=("Arial", 13, "bold"),
+            relief="flat",
+            padding=5
+        )
+
+        # Resaltado de Selección
+        style.map(
+            "Industrial.Treeview",
+            background=[("selected", "#1E3A8A")],
+            foreground=[("selected", "#FFFFFF")]
+        )
+
+        #self.tree_detail.tag_configure("MERCADO", foreground="#0284C7")  # Azul Mercado
+        #self.tree_detail.tag_configure("FABRICA", foreground="#D97706")  # Naranja Fábrica
+
+    def _build_ui(self):
+        # ------------------------------------------------------------------
+        # 1. BARRA SUPERIOR (FILTRO Y SINCRONIZACION)
+        # ------------------------------------------------------------------
+        self.top_panel = ctk.CTkFrame(self, fg_color="#CBD5E1", height=60, corner_radius=0, border_width=1, border_color="#000000")
+        self.top_panel.pack(fill="x", padx=8, pady=(8, 6))
+        self.top_panel.pack_propagate(False)
+
+        ctk.CTkLabel(
+            self.top_panel, 
+            text="HISTORIAL Y SINCRONIZACION", 
+            font=("Arial", 16, "bold"), 
+            text_color="#000000"
+        ).pack(side="left", padx=12)
+
+        ctk.CTkLabel(self.top_panel, text="Fecha:", font=("Arial", 14, "bold"), text_color="#000000").pack(side="left", padx=(15, 5))
+        
+        self.txt_fecha_filtro = ctk.CTkEntry(
+            self.top_panel,
+            font=("Arial", 14, "bold"),
+            text_color="#000000",
+            fg_color="#FFFFFF",
+            border_color="#000000",
+            border_width=2,
+            width=130,
+            height=36,
+            justify="center",
+            corner_radius=0
+        )
+        self.txt_fecha_filtro.pack(side="left", padx=(0, 8))
+        self.txt_fecha_filtro.insert(0, datetime.now().strftime("%Y-%m-%d"))
+
+        btn_filtrar = ctk.CTkButton(
+            self.top_panel,
+            text="FILTRAR",
+            font=("Arial", 13, "bold"),
+            fg_color="#334155",
+            hover_color="#1E293B",
+            text_color="#FFFFFF",
+            corner_radius=0,
+            width=100,
+            height=36,
+            command=self.cargar_datos_locales
+        )
+        btn_filtrar.pack(side="left", padx=4)
+
+        self.lbl_sync_status = ctk.CTkLabel(
+            self.top_panel,
+            text="",
+            font=("Arial", 13, "bold"),
+            text_color="#1E3A8A"
+        )
+        self.lbl_sync_status.pack(side="right", padx=12)
+
+        self.btn_sync_now = ctk.CTkButton(
+            self.top_panel, 
+            text="SINCRONIZAR DATOS", 
+            font=("Arial", 13, "bold"),
+            fg_color="#1E3A8A", 
+            hover_color="#1E40AF",
+            text_color="#FFFFFF",
+            corner_radius=0,
+            height=38,
+            command=self._sincronizar
+        )
+        self.btn_sync_now.pack(side="right", padx=8)
+
+        # ------------------------------------------------------------------
+        # 2. CONTENEDOR PRINCIPAL
+        # ------------------------------------------------------------------
+        self.main_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_container.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        
+        self.main_container.grid_columnconfigure(0, weight=6)
+        self.main_container.grid_columnconfigure(1, weight=4)
+        self.main_container.grid_rowconfigure(0, weight=1)
+
+        # ------------------------------------------------------------------
+        # TABLA IZQUIERDA: RECIBOS EMITIDOS
+        # ------------------------------------------------------------------
+        self.frame_master = ctk.CTkFrame(self.main_container, fg_color="#FFFFFF", border_width=1, border_color="#000000", corner_radius=0)
+        self.frame_master.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
+
+        lbl_title_m = ctk.CTkLabel(
+            self.frame_master, 
+            text="RECIBOS DE ENTREGA EMITIDOS", 
+            font=("Arial", 14, "bold"), 
+            fg_color="#0F172A", 
+            text_color="#FFFFFF", 
+            height=34, 
+            corner_radius=0
+        )
+        lbl_title_m.pack(fill="x", side="top")
+
+        cols_m = ("ticket", "lote", "socio", "parcela", "sacos", "total_kg", "estado")
+        self.tree_master = ttk.Treeview(
+            self.frame_master, 
+            columns=cols_m, 
+            show="headings", 
+            style="Industrial.Treeview",
+            selectmode="browse"
+        )
+        
+        self.tree_master.heading("ticket", text="Recibo")
+        self.tree_master.heading("lote", text="Cod. Lote")
+        self.tree_master.heading("socio", text="Titular / Socio")
+        self.tree_master.heading("parcela", text="Parcela")
+        self.tree_master.heading("sacos", text="Sacos")
+        self.tree_master.heading("total_kg", text="Total Kg")
+        self.tree_master.heading("estado", text="Estado")
+
+        self.tree_master.column("ticket", width=120, anchor="center")
+        self.tree_master.column("lote", width=130, anchor="center")
+        self.tree_master.column("socio", width=220, anchor="w")
+        self.tree_master.column("parcela", width=90, anchor="center")
+        self.tree_master.column("sacos", width=70, anchor="center")
+        self.tree_master.column("total_kg", width=110, anchor="e")
+        self.tree_master.column("estado", width=100, anchor="center")
+
+        sb_m = ttk.Scrollbar(self.frame_master, orient="vertical", command=self.tree_master.yview)
+        self.tree_master.configure(yscrollcommand=sb_m.set)
+
+        sb_m.pack(side="right", fill="y")
+        self.tree_master.pack(fill="both", expand=True)
+        self.tree_master.bind("<<TreeviewSelect>>", self._on_recibo_selected)
+
+        # ------------------------------------------------------------------
+        # TABLA DERECHA: BAJADAS DE BALANZA
+        # ------------------------------------------------------------------
+        self.frame_detail = ctk.CTkFrame(self.main_container, fg_color="#FFFFFF", border_width=1, border_color="#000000", corner_radius=0)
+        self.frame_detail.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
+
+        self.lbl_detail_title = ctk.CTkLabel(
+            self.frame_detail, 
+            text="BAJADAS DE BALANZA", 
+            font=("Arial", 14, "bold"), 
+            fg_color="#0F172A", 
+            text_color="#FFFFFF", 
+            height=34, 
+            corner_radius=0
+        )
+        self.lbl_detail_title.pack(fill="x", side="top")
+
+        cols_d = ("orden", "trazabilidad", "destino", "sacos", "peso_real", "peso_contable")
+        self.tree_detail = ttk.Treeview(
+            self.frame_detail, 
+            columns=cols_d, 
+            show="headings", 
+            style="Industrial.Treeview",
+            selectmode="none"
+        )
+
+        self.tree_detail.heading("orden", text="N°")
+        self.tree_detail.heading("trazabilidad", text="Cod. Trazabilidad")
+        self.tree_detail.heading("destino", text="Destino")
+        self.tree_detail.heading("sacos", text="Sacos")
+        self.tree_detail.heading("peso_real", text="P. Real")
+        self.tree_detail.heading("peso_contable", text="P. Contable")
+
+        self.tree_detail.column("orden", width=50, anchor="center")
+        self.tree_detail.column("trazabilidad", width=200, anchor="w")
+        self.tree_detail.column("destino", width=100, anchor="center")
+        self.tree_detail.column("sacos", width=70, anchor="center")
+        self.tree_detail.column("peso_real", width=90, anchor="e")
+        self.tree_detail.column("peso_contable", width=100, anchor="e")
+
+        sb_d = ttk.Scrollbar(self.frame_detail, orient="vertical", command=self.tree_detail.yview)
+        self.tree_detail.configure(yscrollcommand=sb_d.set)
+
+        sb_d.pack(side="right", fill="y")
+        self.tree_detail.pack(fill="both", expand=True)
+
+    # ----------------------------------------------------------------------
+    # CARGA Y EVENTOS DE DATOS
+    # ----------------------------------------------------------------------
+    def cargar_datos_locales(self):
+        """Carga el historial de recibos limpios en la tabla sin cuadros fantasma."""
+        for item in self.tree_master.get_children():
+            self.tree_master.delete(item)
+            
+        self._limpiar_tabla_detalles()
+        self.mapa_recibos.clear()
+
+        fecha_filtro = self.txt_fecha_filtro.get().strip()
+        historial = self.recepcion_dao.obtener_historial_por_fecha(fecha_filtro)
+
+        for item in historial:
+            socio_txt = f"{item['codigo_padron']} - {item.get('socio_nombre') or ''}".strip()
+            estado_txt = "PENDIENTE" if item['sincronizado'] == 0 else "SYNC"
+
+            item_id = self.tree_master.insert(
+                "", 
+                "end", 
+                values=(
+                    item['codigo_ticket'],
+                    item.get('codigo_lote_origen', '-'),
+                    socio_txt,
+                    item.get('codigo_parcela', '-'),
+                    item['total_sacos'],
+                    f"{item['peso_neto_total']:.2f} kg",
+                    estado_txt
+                )
+            )
+            self.mapa_recibos[item_id] = item
+
+    def _on_recibo_selected(self, event):
+        selected_items = self.tree_master.selection()
+        if not selected_items:
+            return
+
+        item_id = selected_items[0]
+        recibo_data = self.mapa_recibos.get(item_id)
+        if not recibo_data:
+            return
+
+        self.recibo_seleccionado_uuid = recibo_data['uuid']
+        self.lbl_detail_title.configure(
+            text=f"BAJADAS - RECIBO: {recibo_data['codigo_ticket']} | SOCIO: {recibo_data['codigo_padron']}"
+        )
+        self._cargar_detalles_recibo(self.recibo_seleccionado_uuid)
+
+    def _cargar_detalles_recibo(self, recepcion_uuid: str):
+        self._limpiar_tabla_detalles()
+
+        detalles = self.recepcion_dao.obtener_detalles_por_recepcion_uuid(recepcion_uuid)
+
+        for d in detalles:
+            self.tree_detail.insert(
+                "",
+                "end",
+                values=(
+                    f"#{d['orden']}",
+                    d.get('codigo_trazabilidad', '-'),
+                    d.get('destino', 'MERCADO'),
+                    d['numero_sacos'],
+                    f"{d['peso_bruto']:.2f} kg",
+                    f"{d['peso_contable']:.2f} kg"
+                )
+            )
+
+    def _limpiar_tabla_detalles(self):
+        for item in self.tree_detail.get_children():
+            self.tree_detail.delete(item)
+
+    # ----------------------------------------------------------------------
+    # SINCRONIZACIÓN ASÍNCRONA
+    # ----------------------------------------------------------------------
+    def _sincronizar(self):
+        self.btn_sync_now.configure(state="disabled", text="SINCRONIZANDO...")
+        self.lbl_sync_status.configure(text="Conectando...", text_color="#1E3A8A")
+
+        threading.Thread(target=self._hilo_sincronizacion, daemon=True).start()
+
+    def _hilo_sincronizacion(self):
+        subidos = self.sync_service.subir_pesajes_pendientes()
+        maestros_ok = self.sync_service.descargar_maestros()
+
+        self.after(0, lambda: self._finalizar_sincronizacion(subidos, maestros_ok))
+
+    def _finalizar_sincronizacion(self, subidos: int, maestros_ok: bool):
+        self.btn_sync_now.configure(state="normal", text="SINCRONIZAR DATOS")
+
+        if subidos > 0 or maestros_ok:
+            msg = f"OK: Sincronizacion exitosa ({subidos} enviados)."
+            self.lbl_sync_status.configure(text=msg, text_color="#15803D")
+        else:
+            self.lbl_sync_status.configure(text="INFO: Sin datos pendientes o sin red.", text_color="#B45309")
+
+        self.cargar_datos_locales()

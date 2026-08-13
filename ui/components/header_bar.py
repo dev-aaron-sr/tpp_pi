@@ -73,6 +73,20 @@ class HeaderBar(ctk.CTkFrame):
         )
         self.btn_pesaje.pack(side="right", padx=5, pady=8)
 
+        self.btn_pesaje = ctk.CTkButton(
+            self, 
+            text="Configuracion", 
+            font=("Segoe UI", 13, "bold"),
+            fg_color="#FFFFFF", 
+            text_color="#000000",
+            hover_color="#E2E8F0",
+            corner_radius=10,
+            width=100,
+            height=32,
+            command=lambda: self._select_tab("CONFIG")
+        )
+        self.btn_pesaje.pack(side="right", padx=5, pady=8)
+
     def set_balanza_status(self, online: bool):
         """Actualiza el indicador visual de la balanza dinámicamente."""
         if online:

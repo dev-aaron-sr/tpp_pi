@@ -1,10 +1,10 @@
 import customtkinter as ctk
 from ui.components.header_bar import HeaderBar
 from ui.views.pesaje_view import PesajeView
-from ui.views.apertura_sesion_view import AperturaSesionView  # <--- NUEVO IMPORT
+from ui.views.apertura_sesion_view import AperturaSesionView
 from ui.views.admin_view import AdminView
 from ui.views.padron_view import PadronView
-
+from ui.views.config_view import ConfiguracionView  # <--- 1. NUEVO IMPORT
 
 class AppWindow(ctk.CTk):
     def __init__(self, agricultor_dao, recepcion_dao, sesion_dao, scale_service, print_service, sync_service):
@@ -12,12 +12,11 @@ class AppWindow(ctk.CTk):
 
         self.agricultor_dao = agricultor_dao
         self.recepcion_dao = recepcion_dao
-        self.sesion_dao = sesion_dao  # <--- RECIBE EL DAO
+        self.sesion_dao = sesion_dao
         self.scale_service = scale_service
         self.print_service = print_service
         self.sync_service = sync_service
 
-        # Ventana Base
         self.title("Intelisoft Industrial - Sistema de Pesaje")
         self.geometry("1024x600")
         self.minsize(1024, 600)
@@ -26,18 +25,15 @@ class AppWindow(ctk.CTk):
         self._build_ui()
 
     def _build_ui(self):
-        # 1. Header Bar Único
         self.header = HeaderBar(self, on_tab_change=self.cambiar_vista)
         self.header.pack(fill="x", side="top")
 
-        # 2. Contenedor Dinámico para Vistas
         self.container = ctk.CTkFrame(self, fg_color="transparent")
         self.container.pack(fill="both", expand=True)
 
-        # 3. Contenedor wrapper para el área de Pesaje (Apertura o Balanza)
         self.pesaje_container = ctk.CTkFrame(self.container, fg_color="transparent")
 
-        # Diccionario de Vistas Principal
+        # 2. Registrar la vista de Configuración
         self.views = {
             "PESAJE": self.pesaje_container,
             "ADMIN": AdminView(
@@ -49,22 +45,30 @@ class AppWindow(ctk.CTk):
                 self.container, 
                 self.agricultor_dao, 
                 self.sync_service
+            ),
+            "CONFIG": ConfiguracionView(
+                self.container,
+                on_guardar_cb=self._al_guardar_configuracion  # Callback para reconectar balanza
             )
         }
 
-        # Vista por defecto: Pesaje
         self.cambiar_vista("PESAJE")
 
+    def _al_guardar_configuracion(self, nueva_config: dict):
+        """Reconecta la balanza en vivo con el nuevo puerto COM sin reiniciar la App."""
+        if hasattr(self.scale_service, 'reconnect'):
+            self.scale_service.reconnect(
+                port=nueva_config["balanza_port"], 
+                baudrate=nueva_config["balanza_baudrate"]
+            )
+
     def _cargar_modulo_pesaje(self):
-        """Alterna limpiamente entre la vista de Apertura y la de Pesaje según la BD."""
-        # Limpiar cualquier widget previo en el contenedor de pesaje
         for widget in self.pesaje_container.winfo_children():
             widget.destroy()
 
         sesion_activa = self.sesion_dao.obtener_sesion_activa()
 
         if not sesion_activa:
-            # Opción A: No hay sesión -> Mostrar pantalla limpia de bienvenida/apertura
             vista_apertura = AperturaSesionView(
                 parent=self.pesaje_container,
                 sesion_dao=self.sesion_dao,
@@ -72,7 +76,6 @@ class AppWindow(ctk.CTk):
             )
             vista_apertura.pack(fill="both", expand=True)
         else:
-            # Opción B: Sesión activa -> Cargar vista completa de pesaje
             vista_pesaje = PesajeView(
                 parent=self.pesaje_container,
                 agricultor_dao=self.agricultor_dao,
@@ -86,12 +89,10 @@ class AppWindow(ctk.CTk):
             vista_pesaje.pack(fill="both", expand=True)
 
     def cambiar_vista(self, tab_name: str):
-        """Oculta la vista activa y muestra la seleccionada."""
         for view in self.views.values():
             view.pack_forget()
 
         if tab_name in self.views:
-            # Si se selecciona PESAJE, recargamos el estado de sesión dinámicamente
             if tab_name == "PESAJE":
                 self._cargar_modulo_pesaje()
 

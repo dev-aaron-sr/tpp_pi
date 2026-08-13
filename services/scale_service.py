@@ -59,11 +59,11 @@ class ScaleService:
                                 except InvalidOperation:
                                     pass
             except Exception as e:
-                print(f"⚠️ [ScaleService] Error en {self.port}: {e}. Reintentando en 2s...")
+                #print(f"⚠️ [ScaleService] Error en {self.port}: {e}. Reintentando en 2s...")
                 time.sleep(2)
 
     def get_weight(self) -> Decimal:
         """Devuelve el peso actual registrado de forma Thread-Safe."""
         with self._lock:
-            #return self.current_weight
-            return 40.24
+            return self.current_weight
+            #return 40.24

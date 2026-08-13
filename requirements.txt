@@ -1,3 +1,5 @@
 customtkinter
 pyserial
 requests
+pywin32; platform_system == "Windows"
+Pillow

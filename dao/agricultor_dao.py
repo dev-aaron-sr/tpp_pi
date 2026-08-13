@@ -60,16 +60,27 @@ class AgricultorDao:
                     activo = excluded.activo
             """, (ag['codigo_padron'], ag['nombres'], ag.get('apellidos'), 1 if ag.get('activo', True) else 0))
 
-            ag_id = cursor.lastrowid or cursor.execute("SELECT id FROM agricultores WHERE codigo_padron = ?", (ag['codigo_padron'],)).fetchone()['id']
+            cursor.execute("SELECT id FROM agricultores WHERE codigo_padron = ?", (ag['codigo_padron'],))
+            row = cursor.fetchone()
+            if not row:
+                continue
+            ag_id = row['id'] if isinstance(row, dict) else row[0]
 
             for parc in ag.get('parcelas', []):
                 cursor.execute("""
-                    INSERT INTO parcelas (agricultor_id, codigo_parcela, nombre_parcela, sector)
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(codigo_parcela) DO UPDATE SET
+                    INSERT INTO parcelas (agricultor_id, codigo_interno, codigo_parcela, nombre_parcela, sector)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(agricultor_id, codigo_interno) DO UPDATE SET
+                        codigo_parcela = excluded.codigo_parcela,
                         nombre_parcela = excluded.nombre_parcela,
                         sector = excluded.sector
-                """, (ag_id, parc['codigo_parcela'], parc['nombre_parcela'], parc.get('sector')))
+                """, (
+                    ag_id, 
+                    parc['codigo_interno'], 
+                    parc.get('codigo_parcela'), 
+                    parc['nombre_parcela'], 
+                    parc.get('sector')
+                ))
 
         conn.commit()
         conn.close()
