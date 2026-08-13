@@ -588,12 +588,7 @@ class AdminView(ctk.CTkFrame):
             "codigo_ticket": recibo_data.get("codigo_ticket", "S/N"),
             "codigo_padron": recibo_data.get("codigo_padron", "-"),
             "socio_nombre": recibo_data.get("socio_nombre", "-"),
-            "documento": (
-                recibo_data.get("numero_documento")
-                or recibo_data.get("documento")
-                or recibo_data.get("dni")
-                or "-"
-            ),
+            "documento": recibo_data.get("dni") or "-",  # <--- Lee el DNI traído por el LEFT JOIN
             "codigo_parcela": recibo_data.get("codigo_parcela", "-"),
             "sector": recibo_data.get("sector", "-"),
             "fecha_pesaje": (
