@@ -599,6 +599,7 @@ class AdminView(ctk.CTkFrame):
             "peso_total": sum(b["peso"] for b in todas_bajadas),
             "bajadas": todas_bajadas,
         }
+        print(recibo_payload)
 
         try:
             exito = self.print_service.imprimir_recibo_dec(recibo_payload)

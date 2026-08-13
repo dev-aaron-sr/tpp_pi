@@ -191,10 +191,12 @@ class RecepcionPesajeDao:
 
         cursor.execute("""
             SELECT r.*, 
-                   a.nombres || ' ' || COALESCE(a.apellidos, '') AS socio_nombre
+                   a.dni,
+                   a.nombres || ' ' || COALESCE(a.apellidos, '') AS socio_nombre,
+                   p.sector AS sector
             FROM recepciones_pesaje r
             LEFT JOIN agricultores a ON a.codigo_padron = r.codigo_padron
-            LEFT JOIN parcelas p ON a.id = p.agricultor_id AND r.codigo_parcela = p.codigo_interno
+            LEFT JOIN parcelas p ON a.id = p.agricultor_id AND r.codigo_parcela = p.codigo_parcela
             WHERE DATE(r.fecha_pesaje) = ? AND r.estado = 'COMPLETADO'
             ORDER BY r.id DESC
         """, (fecha_ymd,))
