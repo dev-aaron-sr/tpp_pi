@@ -39,7 +39,8 @@ class AppWindow(ctk.CTk):
             "ADMIN": AdminView(
                 self.container, 
                 self.recepcion_dao, 
-                self.sync_service
+                self.sync_service,
+                self.print_service
             ),
             "PADRON": PadronView(
                 self.container, 
