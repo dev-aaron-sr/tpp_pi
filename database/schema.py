@@ -86,5 +86,11 @@ class DatabaseSchema:
                 FOREIGN KEY (recepcion_pesaje_uuid) REFERENCES recepciones_pesaje(uuid)
             );
         """)
+
+        # Agregar columna dni a la tabla existente sin borrar datos
+        try:
+            cursor.execute("ALTER TABLE agricultores ADD COLUMN dni TEXT;")
+        except Exception:
+            pass  # Ignorar si la columna ya existe
         conn.commit()
         conn.close()

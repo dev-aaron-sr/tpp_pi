@@ -52,6 +52,51 @@ class AgricultorDao:
 
         for ag in agricultores_data:
             cursor.execute("""
+                INSERT INTO agricultores (codigo_padron, dni, nombres, apellidos, activo)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(codigo_padron) DO UPDATE SET
+                    dni = excluded.dni,
+                    nombres = excluded.nombres,
+                    apellidos = excluded.apellidos,
+                    activo = excluded.activo
+            """, (
+                ag['codigo_padron'], 
+                ag.get('numero_documento'),  # Captura el DNI desde el payload que envía Laravel
+                ag['nombres'], 
+                ag.get('apellidos'), 
+                1 if ag.get('activo', True) else 0
+            ))
+
+            cursor.execute("SELECT id FROM agricultores WHERE codigo_padron = ?", (ag['codigo_padron'],))
+            row = cursor.fetchone()
+            if not row:
+                continue
+            ag_id = row['id'] if isinstance(row, dict) else row[0]
+
+            for parc in ag.get('parcelas', []):
+                cursor.execute("""
+                    INSERT INTO parcelas (agricultor_id, codigo_interno, codigo_parcela, nombre_parcela, sector)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(agricultor_id, codigo_interno) DO UPDATE SET
+                        codigo_parcela = excluded.codigo_parcela,
+                        nombre_parcela = excluded.nombre_parcela,
+                        sector = excluded.sector
+                """, (
+                    ag_id, 
+                    parc['codigo_interno'], 
+                    parc.get('codigo_parcela'), 
+                    parc['nombre_parcela'], 
+                    parc.get('sector')
+                ))
+
+        conn.commit()
+        conn.close()
+        """Guarda o actualiza la lista maestra descargada desde Laravel."""
+        conn = self.db_conn.get_connection()
+        cursor = conn.cursor()
+
+        for ag in agricultores_data:
+            cursor.execute("""
                 INSERT INTO agricultores (codigo_padron, nombres, apellidos, activo)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(codigo_padron) DO UPDATE SET

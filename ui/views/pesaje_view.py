@@ -550,7 +550,7 @@ class PesajeView(ctk.CTkFrame):
       nombre = f"{ag['nombres']} {ag.get('apellidos', '')}".strip()
       self.lbl_socio_nombre.configure(text=nombre, text_color="#000000")
       self.lbl_socio_doc.configure(
-          text=ag.get("numero_documento") or "NO REGISTRADO"
+          text=ag.get("dni") or "NO REGISTRADO"
       )
 
       self.parcelas_map = {}
@@ -881,7 +881,7 @@ class PesajeView(ctk.CTkFrame):
                   f"{self.agricultor_actual['nombres']} {self.agricultor_actual.get('apellidos', '')}"
                   .strip()
               ),
-              "documento": self.agricultor_actual.get("numero_documento", "-"),
+              "documento": self.agricultor_actual.get("dni", "-"),
               "codigo_parcela": (
                   parcela_obj.get("codigo_interno")
                   or parcela_obj.get("codigo_parcela", "-")
